@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+}
+
+// Sets Java version.
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+group = 'org.monke.executor'
+version = '1.0.0-SNAPSHOT'
+
+// Update Gradle wrapper version : ./gradlew wrapper.
+wrapper {
+    gradleVersion = '9.2'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    mockitoAgent {
+        transitive = false
+    }
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.assertj:assertj-core:3.27.4'
+
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.19.0'
+    mockitoAgent 'org.mockito:mockito-core:5.19.0'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs "-javaagent:${configurations.mockitoAgent.asPath}"
+}
