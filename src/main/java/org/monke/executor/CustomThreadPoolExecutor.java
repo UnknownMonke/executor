@@ -12,6 +12,7 @@ public class CustomThreadPoolExecutor implements ExecutorService {
 
     private final BlockingQueue<Runnable> taskQueue;
     private final Set<Worker> workers = new HashSet<>();
+
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
 
@@ -58,16 +59,10 @@ public class CustomThreadPoolExecutor implements ExecutorService {
      */
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        if (isShutdown.get()) {
-            throw new RejectedExecutionException("Thread pool is shut down");
-        }
         FutureTask<T> futureTask = new FutureTask<>(task);
 
-        boolean inserted = taskQueue.offer(futureTask);
+        execute(futureTask);
 
-        if (!inserted) {
-            throw new RejectedExecutionException("Task queue is full");
-        }
         return futureTask;
     }
 
@@ -312,5 +307,9 @@ public class CustomThreadPoolExecutor implements ExecutorService {
             worker.join(timeLeft);
         }
         return true;
+    }
+
+    BlockingQueue<Runnable> getTaskQueue() {
+        return taskQueue;
     }
 }
