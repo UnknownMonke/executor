@@ -5,25 +5,25 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * <p>Runs tasks from provided queue.</p>
+ * Runs tasks from provided queue.
+ *
  * <p>Separate class benefits :
  * <ul>
- *     <li>Separation of concerns : thread pool handles lifecycle, worker handles execution.</li>
- *     <li>Better readability :	cleaner executor code.</li>
- *     <li>Easier to extend.</li>
- *     <li>Testable.</li>
+ *     <li>Separation of concerns : thread pool handles lifecycle, worker handles execution.
+ *     <li>Better readability :	cleaner executor code.
+ *     <li>Easier to extend.
+ *     <li>Testable.
  * </ul>
- * </p>
  */
 public class Worker extends Thread {
 
     private final BlockingQueue<Runnable> taskQueue;
-    private final AtomicBoolean stopping;
+    private final AtomicBoolean isShutdown;
 
-    public Worker(String name, BlockingQueue<Runnable> taskQueue, AtomicBoolean stopping) {
+    public Worker(String name, BlockingQueue<Runnable> taskQueue, AtomicBoolean isShutdown) {
         super(name);
         this.taskQueue = taskQueue;
-        this.stopping = stopping;
+        this.isShutdown = isShutdown;
     }
 
     /**
@@ -31,7 +31,7 @@ public class Worker extends Thread {
      */
     @Override
     public void run() {
-        while (!stopping.get() || !taskQueue.isEmpty()) {
+        while (!isShutdown.get() || !taskQueue.isEmpty()) {
             try {
                 Runnable task = taskQueue.poll(100, TimeUnit.MILLISECONDS);
                 if (task != null) {
