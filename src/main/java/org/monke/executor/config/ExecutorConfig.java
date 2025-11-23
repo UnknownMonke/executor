@@ -1,4 +1,7 @@
-package org.monke.executor;
+package org.monke.executor.config;
+
+import org.monke.executor.rejection.RejectedExecutionHandler;
+import org.monke.executor.rejection.RejectionPolicy;
 
 /**
  * Static configuration class to avoid magic numbers, and provide readability.
@@ -19,5 +22,9 @@ public class ExecutorConfig {
 
     public static int ofPriority(int priority) {
         return priority;
+    }
+
+    public static Long withDeadline(Long deadline) {
+        return deadline;
     }
 }

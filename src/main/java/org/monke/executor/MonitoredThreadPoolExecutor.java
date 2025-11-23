@@ -1,5 +1,9 @@
 package org.monke.executor;
 
+import org.monke.executor.rejection.RejectedExecutionHandler;
+
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,7 +21,7 @@ public class MonitoredThreadPoolExecutor extends FixedThreadPoolExecutor {
         super(poolSize, queueCapacity, rejectedExecutionHandler);
     }
 
-    public  MonitoredThreadPoolExecutor(int poolSize) {
+    public MonitoredThreadPoolExecutor(int poolSize) {
         super(poolSize);
     }
 
@@ -27,21 +31,25 @@ public class MonitoredThreadPoolExecutor extends FixedThreadPoolExecutor {
 
 
     @Override
-    public void execute(Runnable task) {
+    public void execute(PrioritizedTask task) {
         totalTaskCount.incrementAndGet();
         super.execute(taskProxy(task));
     }
 
-    private Runnable taskProxy(Runnable task) {
-        return () -> {
-            activeTaskCount.incrementAndGet();
-            try {
-                task.run();
-            } finally {
-                activeTaskCount.decrementAndGet();
-                completedTaskCount.incrementAndGet();
-            }
-        };
+    private PrioritizedTask taskProxy(PrioritizedTask task) {
+        return new PrioritizedTask(
+            () -> {
+                activeTaskCount.incrementAndGet();
+                try {
+                    task.run();
+                } finally {
+                    activeTaskCount.decrementAndGet();
+                    completedTaskCount.incrementAndGet();
+                }
+            },
+            task.getBasePriority(),
+            task.getDeadline()
+        );
     }
 
     public int getActiveCount() {
@@ -58,5 +66,21 @@ public class MonitoredThreadPoolExecutor extends FixedThreadPoolExecutor {
 
     public int getQueueSize() {
         return super.getTaskQueue().size();
+    }
+
+    public List<String> getQueuedTasksDetails() {
+        return super.getTaskQueue().stream()
+            .filter(t -> t instanceof PrioritizedTask)
+            .map(Object::toString)
+            .toList();
+    }
+
+    public Map<String, Long> getTaskStatistics() {
+        return Map.of(
+            "Queue Size", (long) getQueueSize(),
+            "Total Tasks Submitted", getTotalTaskCount(),
+            "Completed Tasks", getCompletedTaskCount(),
+            "Active Tasks", (long) getActiveCount()
+        );
     }
 }

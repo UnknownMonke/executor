@@ -1,42 +1,53 @@
 package org.monke.executor;
 
+import org.monke.executor.rejection.RejectionPolicy;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import static org.monke.executor.ExecutorConfig.*;
+import static org.monke.executor.config.ExecutorConfig.*;
 
 public class Main {
 
     public static void main(String[] args) {
-        FixedThreadPoolExecutor executorService = new FixedThreadPoolExecutor(ofPoolSize(3), ofQueueCapacity(2),
+        MonitoredThreadPoolExecutor executorService = new MonitoredThreadPoolExecutor(ofPoolSize(1), ofQueueCapacity(4),
             new RejectionPolicy.CallerRunsPolicy());
 
-        Map<Integer, Integer> map = new HashMap<>();
+        long now = System.currentTimeMillis();
 
-        for (int i = 1; i <= 10; i++) {
-            int priority = (int) (Math.random() * 10);
-            map.put(i, priority);
+        executorService.schedule(setTask("LOW PRIORITY (no deadline)"), ofPriority(1), null);
+        executorService.schedule(setTask("MEDIUM PRIORITY (deadline 30s)"), ofPriority(5), withDeadline(now + 30000L));
+        executorService.schedule(setTask("HIGH PRIORITY (no deadline)"), ofPriority(9), null);
+        executorService.schedule(setTask("URGENT (deadline 10s, low priority)"), ofPriority(1), withDeadline(now + 10000L));
+
+        try {
+            Thread.sleep(3000);
+
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
-        System.out.println(map);
+        executorService.schedule(setTask("Old low priority, now aged high"), ofPriority(1), null);
 
-        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+        executorService.getQueuedTasksDetails().forEach(System.out::println);
 
-            executorService.execute(() -> {
-                System.out.println(Thread.currentThread().getName() + " executing task " + entry.getKey() + " with priority " + entry.getValue());
-
-                try {
-                    Thread.sleep(5000);
-
-                } catch (InterruptedException e) {
-                    throw new RuntimeException("Thread could not go to sleep");
-                }
-            }, entry.getValue());
-        }
         executorService.close();
+    }
+
+    private static Runnable setTask(String message) {
+        return () -> {
+            System.out.println("Executing task : " + message);
+
+            try {
+                Thread.sleep(5000);
+
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Thread could not go to sleep");
+            }
+        };
     }
 
     private void basicExample() {
@@ -122,6 +133,35 @@ public class Main {
                     throw new RuntimeException("Thread could not go to sleep");
                 }
             });
+        }
+        executorService.close();
+    }
+
+    private void simplePriorityExample() {
+        FixedThreadPoolExecutor executorService = new FixedThreadPoolExecutor(ofPoolSize(3), ofQueueCapacity(2),
+            new RejectionPolicy.CallerRunsPolicy());
+
+        Map<Integer, Integer> map = new HashMap<>();
+
+        for (int i = 1; i <= 10; i++) {
+            int priority = (int) (Math.random() * 10);
+            map.put(i, priority);
+        }
+
+        System.out.println(map);
+
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+
+            executorService.execute(() -> {
+                System.out.println(Thread.currentThread().getName() + " executing task " + entry.getKey() + " with priority " + entry.getValue());
+
+                try {
+                    Thread.sleep(5000);
+
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Thread could not go to sleep");
+                }
+            }, entry.getValue());
         }
         executorService.close();
     }

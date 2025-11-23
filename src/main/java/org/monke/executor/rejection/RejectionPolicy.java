@@ -1,4 +1,6 @@
-package org.monke.executor;
+package org.monke.executor.rejection;
+
+import org.monke.executor.FixedThreadPoolExecutor;
 
 import java.util.concurrent.RejectedExecutionException;
 

@@ -1,5 +1,8 @@
 package org.monke.executor;
 
+import org.monke.executor.config.ExecutorConfig;
+import org.monke.executor.rejection.RejectedExecutionHandler;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,7 +15,7 @@ public class FixedThreadPoolExecutor implements ExecutorService {
 
     private final PriorityBlockingQueue<Runnable> taskQueue;
     private final Set<Worker> workers = new HashSet<>();
-    private final RejectedExecutionHandler rejectedExecutionHandler;
+    private final org.monke.executor.rejection.RejectedExecutionHandler rejectedExecutionHandler;
 
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
@@ -39,24 +42,33 @@ public class FixedThreadPoolExecutor implements ExecutorService {
     }
 
 
-    /**
-     * Schedules task by adding it to the queue. When a worker is available, it will poll and execute the task.
-     */
-    public void execute(Runnable task, int priority) {
-        if (isShutdown.get()) {
-            rejectedExecutionHandler.rejectedExecution(task, this);
-            return;
-        }
-        boolean inserted = taskQueue.offer(new PrioritizedTask(task, priority));
+    public void schedule(Runnable task, int priority, Long deadline) {
+        execute(new PrioritizedTask(task, priority, deadline));
+    }
 
-        if (!inserted) {
-            rejectedExecutionHandler.rejectedExecution(task, this);
-        }
+    public void execute(Runnable task, int priority) {
+        execute(new PrioritizedTask(task, priority, null));
     }
 
     @Override
     public void execute(Runnable task) {
-        execute(task, 5); // Default priority.
+        execute(new PrioritizedTask(task, 0, null));
+    }
+
+    /**
+     * Schedules task by adding it to the queue. When a worker is available, it will poll and execute the task.
+     */
+    void execute(PrioritizedTask task) {
+        if (isShutdown.get()) {
+            rejectedExecutionHandler.rejectedExecution(task, this);
+            return;
+        }
+
+        boolean inserted = taskQueue.offer(task);
+
+        if (!inserted) {
+            rejectedExecutionHandler.rejectedExecution(task, this);
+        }
     }
 
     /**
@@ -326,7 +338,7 @@ public class FixedThreadPoolExecutor implements ExecutorService {
         return true;
     }
 
-    BlockingQueue<Runnable> getTaskQueue() {
+    public BlockingQueue<Runnable> getTaskQueue() {
         return taskQueue;
     }
 }
