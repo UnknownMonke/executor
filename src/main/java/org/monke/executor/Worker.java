@@ -9,10 +9,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>Separate class benefits :
  * <ul>
- *     <li>Separation of concerns : thread pool handles lifecycle, worker handles execution.
- *     <li>Better readability :	cleaner executor code.
- *     <li>Easier to extend.
- *     <li>Testable.
+ *     <li> Separation of concerns : thread pool handles lifecycle, worker handles execution.
+ *     <li> Better readability :	cleaner executor code.
+ *     <li> Easier to extend.
+ *     <li> Testable.
  * </ul>
  */
 public class Worker extends Thread {

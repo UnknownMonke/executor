@@ -8,16 +8,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Executes submitted {@link Runnable} tasks into a fixed-size pool of available threads.
  * An {@link Executor} is normally used instead of explicitly creating threads.
  */
-public class CustomThreadPoolExecutor implements ExecutorService {
+public class FixedThreadPoolExecutor implements ExecutorService {
 
     private final BlockingQueue<Runnable> taskQueue;
     private final Set<Worker> workers = new HashSet<>();
+    private final RejectedExecutionHandler rejectedExecutionHandler;
 
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
 
 
-    public CustomThreadPoolExecutor(int poolSize) {
-        taskQueue = new LinkedBlockingQueue<>();
+    public FixedThreadPoolExecutor(int poolSize, int queueCapacity,
+                                   RejectedExecutionHandler rejectedExecutionHandler) {
+        taskQueue = new LinkedBlockingQueue<>(queueCapacity);
+        this.rejectedExecutionHandler = rejectedExecutionHandler;
 
         // Inits n workers.
         for (int i = 0; i < poolSize; i++) {
@@ -27,18 +30,28 @@ public class CustomThreadPoolExecutor implements ExecutorService {
         }
     }
 
+    public FixedThreadPoolExecutor(int poolSize) {
+        this(poolSize, ExecutorConfig.DEFAULT_QUEUE_CAPACITY, ExecutorConfig.DEFAULT_REJECTION_POLICY);
+    }
+
+    public FixedThreadPoolExecutor() {
+        this(ExecutorConfig.DEFAULT_POOL_SIZE, ExecutorConfig.DEFAULT_QUEUE_CAPACITY, ExecutorConfig.DEFAULT_REJECTION_POLICY);
+    }
+
+
     /**
      * Schedules task by adding it to the queue. When a worker is available, it will poll and execute the task.
      */
     @Override
     public void execute(Runnable task) {
         if (isShutdown.get()) {
-            throw new RejectedExecutionException("Thread pool is shut down");
+            rejectedExecutionHandler.rejectedExecution(task, this);
+            return;
         }
         boolean inserted = taskQueue.offer(task);
 
         if (!inserted) {
-            throw new RejectedExecutionException("Task queue is full");
+            rejectedExecutionHandler.rejectedExecution(task, this);
         }
     }
 
