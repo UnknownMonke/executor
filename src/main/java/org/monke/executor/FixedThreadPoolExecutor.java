@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class FixedThreadPoolExecutor implements ExecutorService {
 
-    private final BlockingQueue<Runnable> taskQueue;
+    private final PriorityBlockingQueue<Runnable> taskQueue;
     private final Set<Worker> workers = new HashSet<>();
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
@@ -19,7 +19,7 @@ public class FixedThreadPoolExecutor implements ExecutorService {
 
     public FixedThreadPoolExecutor(int poolSize, int queueCapacity,
                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        taskQueue = new LinkedBlockingQueue<>(queueCapacity);
+        taskQueue = new PriorityBlockingQueue<>(queueCapacity);
         this.rejectedExecutionHandler = rejectedExecutionHandler;
 
         // Inits n workers.
@@ -42,17 +42,21 @@ public class FixedThreadPoolExecutor implements ExecutorService {
     /**
      * Schedules task by adding it to the queue. When a worker is available, it will poll and execute the task.
      */
-    @Override
-    public void execute(Runnable task) {
+    public void execute(Runnable task, int priority) {
         if (isShutdown.get()) {
             rejectedExecutionHandler.rejectedExecution(task, this);
             return;
         }
-        boolean inserted = taskQueue.offer(task);
+        boolean inserted = taskQueue.offer(new PrioritizedTask(task, priority));
 
         if (!inserted) {
             rejectedExecutionHandler.rejectedExecution(task, this);
         }
+    }
+
+    @Override
+    public void execute(Runnable task) {
+        execute(task, 5); // Default priority.
     }
 
     /**

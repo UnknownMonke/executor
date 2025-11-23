@@ -1,32 +1,40 @@
 package org.monke.executor;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import static org.monke.executor.ExecutorConfig.ofPoolSize;
-import static org.monke.executor.ExecutorConfig.ofQueueCapacity;
+import static org.monke.executor.ExecutorConfig.*;
 
 public class Main {
 
     public static void main(String[] args) {
-
-        ExecutorService executorService = new FixedThreadPoolExecutor(ofPoolSize(2), ofQueueCapacity(2),
+        FixedThreadPoolExecutor executorService = new FixedThreadPoolExecutor(ofPoolSize(3), ofQueueCapacity(2),
             new RejectionPolicy.CallerRunsPolicy());
 
+        Map<Integer, Integer> map = new HashMap<>();
+
         for (int i = 1; i <= 10; i++) {
-            int taskId = i;
+            int priority = (int) (Math.random() * 10);
+            map.put(i, priority);
+        }
+
+        System.out.println(map);
+
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
 
             executorService.execute(() -> {
-                System.out.println(Thread.currentThread().getName() + " running task " + taskId);
+                System.out.println(Thread.currentThread().getName() + " executing task " + entry.getKey() + " with priority " + entry.getValue());
 
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(5000);
 
                 } catch (InterruptedException e) {
                     throw new RuntimeException("Thread could not go to sleep");
                 }
-            });
+            }, entry.getValue());
         }
         executorService.close();
     }
@@ -95,5 +103,26 @@ public class Main {
         if (!executorService.isTerminated()) {
             executorService.close();
         }
+    }
+
+    private void rejectionExample() {
+        ExecutorService executorService = new FixedThreadPoolExecutor(ofPoolSize(2), ofQueueCapacity(2),
+            new RejectionPolicy.CallerRunsPolicy());
+
+        for (int i = 1; i <= 10; i++) {
+            int taskId = i;
+
+            executorService.execute(() -> {
+                System.out.println(Thread.currentThread().getName() + " running task " + taskId);
+
+                try {
+                    Thread.sleep(500);
+
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Thread could not go to sleep");
+                }
+            });
+        }
+        executorService.close();
     }
 }

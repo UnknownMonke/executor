@@ -16,4 +16,8 @@ public class ExecutorConfig {
     public static int ofQueueCapacity(int queueCapacity) {
         return queueCapacity;
     }
+
+    public static int ofPriority(int priority) {
+        return priority;
+    }
 }
